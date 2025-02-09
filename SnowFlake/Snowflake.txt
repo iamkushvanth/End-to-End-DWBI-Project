@@ -1,0 +1,210 @@
+--Create DataBase
+
+create database DWBI_Project ;
+
+--Create Schema
+
+create schema DWBI_Project_Schema ;
+
+--Create Our Tables
+
+-- Dimention Table : DimDate
+
+create table DimDate(
+DateID int PRIMARY KEY,
+Date DATE,
+DayOfWeek VARCHAR(10),
+Month VARCHAR(10),
+Quarter INT,
+Year INT,
+IsWeekend BOOLEAN
+);
+
+-- Dimention Table : DimLoyaltyProgram
+
+create table DimLoyaltyProgram(
+LoyaltyProgramID INT PRIMARY KEY,
+ProgramName VARCHAR(100),
+ProgramTier VARCHAR(50),
+PointsAccured INT
+);
+
+
+-- Dimention Table : DimCustomer
+
+create table DimCustomer (
+CustomerID INT PRIMARY KEY autoincrement start 1 increment 1, --We are Handling Primary Key Data in Snowflake itself
+FirstName VARCHAR(100),
+LastName VARCHAR(100),
+Gender VARCHAR(100),
+DateOfBirth DATE,
+Email VARCHAR(100),
+PhoneNumber VARCHAR(100),
+Address VARCHAR(255),
+City VARCHAR(100),
+State VARCHAR(100),
+ZipCode VARCHAR(100),
+Country VARCHAR(200),
+LoyaltyProgramID INT
+);
+
+
+
+-- Dimention Table : DimProduct
+
+create table DimProduct(
+ProductID INT PRIMARY KEY autoincrement start 1 increment 1,
+ProductName VARCHAR(100),
+Category VARCHAR(50),
+Brand VARCHAR(50),
+UnitPrice DECIMAL(10,2)
+);
+
+
+
+-- Dimention Table : DimStore
+
+create or replace table DimStore(
+StoreID INT PRIMARY KEY autoincrement start 1 increment 1,
+StoreName VARCHAR(200),
+StoreType VARCHAR(100),
+StoreOpeningDate DATE,
+Address VARCHAR(255),
+City VARCHAR(200),
+State VARCHAR(200),
+Country VARCHAR(200),
+Region VARCHAR(200),
+ManagerName VARCHAR(100)
+);
+
+
+
+--Fact Table : FactOrders
+
+create table FactOrders(
+OrderID INT PRIMARY KEY autoincrement start 1 increment 1,
+DateID INT,
+CustomerID INT,
+ProductID INT,
+StoreID INT,
+QuantityOrdered INT,
+OrderAmount DECIMAL(10,2),
+DiscountAmount DECIMAL(10,2),
+ShippingCost DECIMAL(10,2),
+TotalAmount DECIMAL(10,2),
+FOREIGN KEY (DateID) REFERENCES DimDate(DateID),
+FOREIGN KEY (CustomerID) REFERENCES DimCustomer(CustomerID),
+FOREIGN KEY (ProductID) REFERENCES DimProduct(ProductID),
+FOREIGN KEY (StoreID) REFERENCES DimStore(StoreID)
+);
+
+-- Create File Format of data that we like to load or store in table 
+
+create or replace file format CSV_SOURCE_FILE_FORMAT
+type = 'CSV'
+skip_header = 1
+date_format = 'YYYY-MM-DD';
+
+
+--Stage is a Location in Snowflake for Loading and Unloading the data 
+
+create or replace stage DWBISTAGE;
+
+
+--Use Snowsql and Configure it in CMD using Account_Name followed with user & Password for Snowflake account 
+--After that use Snowsql and upload the test data that we created using python into Stage
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/DimCustomer/DimCustomerData.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimCustomerData/AUTO_COMPRESS=FALSE;
+
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/DimDate/DimDate.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimDate/AUTO_COMPRESS=FALSE;
+
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/DimLoyalty/DimLoyaltyInfo.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimLoyaltyInfo/AUTO_COMPRESS=FALSE;
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/DimProductData/DimProductData.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimProductData/AUTO_COMPRESS=FALSE;
+
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/DimStoreData/DimStoreData.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimStoreData/AUTO_COMPRESS=FALSE;
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/One Time Load/Fact Orders/factorders.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/factorders/AUTO_COMPRESS=FALSE;
+
+
+PUT 'file://C:/Users/2144ax/Downloads/End-to-End DWBI Project/Landing Directory/*.csv' @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/Landing_Directory/AUTO_COMPRESS=FALSE;
+
+
+--TO Load Data from Stage to Our Table we use Simple Copy Command 
+
+--into DimLoyaltyProgram
+
+copy into DimLoyaltyProgram
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimLoyaltyInfo/AUTO_COMPRESS=FALSE/DimLoyaltyInfo.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from DimLoyaltyProgram;
+
+--into DimCustomer
+
+copy into DimCustomer(FirstName,LastName,Gender,DateOfBirth,Email,PhoneNumber,Address,City,State,ZipCode,Country,LoyaltyProgramID)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimCustomerData/AUTO_COMPRESS=FALSE/DimCustomerData.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from DimCustomer;
+
+--into DimProduct
+
+copy into DimProduct(ProductName,Category,Brand,UnitPrice)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimProductData/AUTO_COMPRESS=FALSE/DimProductData.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from DimProduct;
+
+--into DimDate
+
+copy into DimDate(DateID,Date,DayOfWeek,Month,Quarter,Year,IsWeekend)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimDate/AUTO_COMPRESS=FALSE/DimDate.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from DimDate;
+
+--into DimStore
+
+copy into DimStore(StoreName,StoreType,StoreOpeningDate,Address,City,State,Country,Region,ManagerName)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/DimStoreData/AUTO_COMPRESS=FALSE/DimStoreData.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from DimStore;
+
+--into FactOrders
+
+copy into FactOrders(DateID,CustomerID,ProductID,StoreID,QuantityOrdered,OrderAmount,DiscountAmount,ShippingCost,TotalAmount)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/factorders/AUTO_COMPRESS=FALSE/factorders.csv.gz
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from FactOrders limit 100;
+
+copy into FactOrders(DateID,CustomerID,ProductID,StoreID,QuantityOrdered,OrderAmount,DiscountAmount,ShippingCost,TotalAmount)
+  from @DWBI_PROJECT.DWBI_PROJECT_SCHEMA.DWBISTAGE/Landing_Directory/AUTO_COMPRESS=FALSE
+FILE_FORMAT = (FORMAT_NAME = 'CSV_SOURCE_FILE_FORMAT');  
+
+select * from FactOrders limit 100;
+
+
+--Create a New User to use for our powerbi and github 
+
+create or replace user Test_PowerBI_User
+  PASSWORD = 'Test_PowerBI_User'
+  LOGIN_NAME = 'PowerBI User'
+  DEFAULT_ROLE = 'ACCOUNTADMIN'
+  DEFAULT_WAREHOUSE = 'COMPUTE_WH'
+  MUST_CHANGE_PASSWORD = TRUE;
+
+
+
+--Grant it Account Admin Access
+
+grant role accountadmin to user Test_PowerBI_User;
+
+
+
+--Use that user to load the data & Perform Queries 
