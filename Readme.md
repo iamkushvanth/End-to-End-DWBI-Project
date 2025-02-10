@@ -46,6 +46,9 @@ The project revolves around an offline retail organization that sells thousands 
 - **Sales/Factorders**
 - **Loyalty Program**
 
+## Final Dashboard 
+
+<img src="Pics\dashboard.png">
 
 ## Technology Used
 
