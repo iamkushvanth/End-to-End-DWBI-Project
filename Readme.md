@@ -96,9 +96,12 @@ In this comprehensive End-to-End DWBI Project, you will gain hands-on experience
 
 To get started with this project, clone the repository and follow the step-by-step instructions provided in the respective sections.
 
-
+```bash
 git clone https://github.com/your-repository/end-to-end-dwbi-project.git
+```
 
 Install the required Python libraries:
 
+```bash
 pip install -r requirements.txt
+```
